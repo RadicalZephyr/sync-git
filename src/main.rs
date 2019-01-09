@@ -75,10 +75,8 @@ impl Iterator for GitRepos<IntoIter> {
 
 fn main() -> Result<()> {
     let walker = WalkDir::new(".").into_iter();
-    for repo in GitRepos::new(walker) {
-        if let Ok(repo) = repo {
-            println!("{}", repo.path().display());
-        }
+    for repo in GitRepos::new(walker).filter_map(Result::ok) {
+        println!("{}", repo.path().display());
     }
     Ok(())
 }
