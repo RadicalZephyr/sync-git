@@ -33,29 +33,41 @@ fn is_git_dir(entry: &DirEntry) -> bool {
         .unwrap_or(false)
 }
 
-struct GitDirs<I> {
+struct GitRepos<I> {
     it: I,
 }
 
-impl GitDirs<IntoIter> {
-    pub fn new(it: IntoIter) -> GitDirs<IntoIter> {
-        GitDirs { it }
+impl GitRepos<IntoIter> {
+    pub fn new(it: IntoIter) -> GitRepos<IntoIter> {
+        GitRepos { it }
     }
 }
 
-impl Iterator for GitDirs<IntoIter> {
-    type Item = Result<DirEntry>;
+/// Like try, but for iterators that return [`Option<Result<_, _>>`].
+///
+/// [`Option<Result<_, _>>`]: https://doc.rust-lang.org/stable/std/option/enum.Option.html
+macro_rules! itry {
+    ($e:expr) => {
+        match $e {
+            Ok(v) => v,
+            Err(err) => return Some(Err(From::from(err))),
+        }
+    };
+}
 
-    fn next(&mut self) -> Option<Result<DirEntry>> {
+impl Iterator for GitRepos<IntoIter> {
+    type Item = Result<Repository>;
+
+    fn next(&mut self) -> Option<Result<Repository>> {
         loop {
             let dent = match self.it.next() {
-                Some(Ok(dent)) => dent,
-                Some(Err(err)) => return Some(Err(Error::from(err))),
+                Some(dent) => itry!(dent),
                 None => return None,
             };
             if dent.file_type().is_dir() && is_git_dir(&dent) {
                 self.it.skip_current_dir();
-                return Some(Ok(dent));
+                let repo = itry!(Repository::open(dent.path()));
+                return Some(Ok(repo));
             }
         }
     }
@@ -63,10 +75,9 @@ impl Iterator for GitDirs<IntoIter> {
 
 fn main() -> Result<()> {
     let walker = WalkDir::new(".").into_iter();
-    for entry in GitDirs::new(walker) {
-        if let Ok(entry) = entry {
-            println!("{}", entry.path().display());
-            let _repo = Repository::open(entry.path())?;
+    for repo in GitRepos::new(walker) {
+        if let Ok(repo) = repo {
+            println!("{}", repo.path().display());
         }
     }
     Ok(())
