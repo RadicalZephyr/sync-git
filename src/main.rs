@@ -1,4 +1,29 @@
-use walkdir::{DirEntry, IntoIter, Result, WalkDir};
+use failure::Fail;
+use git2::Repository;
+use walkdir::{DirEntry, IntoIter, WalkDir};
+
+#[derive(Debug, Fail)]
+pub enum Error {
+    #[fail(display = "walkdir error: {}", _0)]
+    WalkDir(#[cause] walkdir::Error),
+
+    #[fail(display = "git2 error: {}", _0)]
+    Git2(#[cause] git2::Error),
+}
+
+impl From<git2::Error> for Error {
+    fn from(err: git2::Error) -> Error {
+        Error::Git2(err)
+    }
+}
+
+impl From<walkdir::Error> for Error {
+    fn from(err: walkdir::Error) -> Error {
+        Error::WalkDir(err)
+    }
+}
+
+type Result<T> = std::result::Result<T, Error>;
 
 fn is_git_dir(entry: &DirEntry) -> bool {
     entry
@@ -25,7 +50,7 @@ impl Iterator for GitDirs<IntoIter> {
         loop {
             let dent = match self.it.next() {
                 Some(Ok(dent)) => dent,
-                Some(err @ Err(_)) => return Some(err),
+                Some(Err(err)) => return Some(Err(Error::from(err))),
                 None => return None,
             };
             if dent.file_type().is_dir() && is_git_dir(&dent) {
@@ -39,7 +64,10 @@ impl Iterator for GitDirs<IntoIter> {
 fn main() -> Result<()> {
     let walker = WalkDir::new(".").into_iter();
     for entry in GitDirs::new(walker) {
-        println!("{}", entry?.path().display());
+        if let Ok(entry) = entry {
+            println!("{}", entry.path().display());
+            let _repo = Repository::open(entry.path())?;
+        }
     }
     Ok(())
 }
