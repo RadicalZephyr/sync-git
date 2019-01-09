@@ -5,3 +5,5 @@ authors = ["Geoff Shannon <geoffpshannon@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+git2 = "0.8.0"
+walkdir = "2.2.0"
