@@ -65,7 +65,14 @@ fn main() -> Result<()> {
             Ok(statuses) => {
                 for status in statuses.iter() {
                     if status.status() != Status::CURRENT {
-                        println!("  {} {:?}", status.path().unwrap(), status.status());
+                        println!(
+                            "  {} {:?}",
+                            match status.path() {
+                                Some(path) => path,
+                                None => "_",
+                            },
+                            status.status()
+                        );
                     }
                 }
             }
