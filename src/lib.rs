@@ -3,7 +3,7 @@ use git2::Repository;
 use walkdir::{DirEntry, IntoIter, WalkDir};
 
 mod status_map;
-use crate::status_map::RepositoryStateMap;
+pub use crate::status_map::RepositoryStateMap;
 
 #[derive(Debug, Fail)]
 pub enum Error {

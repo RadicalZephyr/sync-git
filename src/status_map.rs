@@ -1,4 +1,5 @@
 use std::iter::FromIterator;
+use std::mem;
 use std::ops::{Index, IndexMut};
 
 use git2::{Repository, RepositoryState};
@@ -48,6 +49,10 @@ impl Default for RepositoryStateMap {
 impl RepositoryStateMap {
     pub fn new() -> RepositoryStateMap {
         RepositoryStateMap::default()
+    }
+
+    pub fn take(&mut self, index: &RepositoryState) -> Vec<Repository> {
+        mem::replace(&mut self.data[to_usize(index)], vec![])
     }
 }
 
