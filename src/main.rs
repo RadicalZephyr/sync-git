@@ -63,7 +63,7 @@ fn main() -> Result<()> {
 
         for status in repo.statuses(Some(&mut status_opts))?.iter() {
             if status.status() != Status::CURRENT {
-                println!("  file is not current: {}", status.path().unwrap());
+                println!("  {} {:?}", status.path().unwrap(), status.status());
             }
         }
     }
