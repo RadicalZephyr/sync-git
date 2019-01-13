@@ -134,7 +134,8 @@ mod test {
             let dir_names = dir_names.expect("unexpected deceptively named folder in test-cases");
             let expected: Vec<String> = relative_string_vec![
                 "test-cases/mid-state/rebase/.git/",
-                "test-cases/mid-state/rebase-interactive/.git/"
+                "test-cases/mid-state/rebase-interactive/.git/",
+                "test-cases/mid-state/merge/.git/"
             ];
             assert_eq!(expected, repository_paths(&dir_names));
         });
@@ -147,6 +148,12 @@ mod test {
                 WalkGitRepos::new("test-cases").collect();
             let repositories =
                 repositories.expect("unexpected deceptively named folder in test-cases");
+
+            let expected = relative_string_vec!["test-cases/mid-state/merge/.git/"];
+            assert_eq!(
+                expected,
+                repository_paths(&repositories[&RepositoryState::Merge])
+            );
 
             let expected = relative_string_vec!["test-cases/mid-state/rebase/.git/"];
             assert_eq!(
