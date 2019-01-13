@@ -33,6 +33,33 @@ fn display_state(repo: &Repository) -> &'static str {
     }
 }
 
+fn repository_statuses(repo: &Repository, status_opts: &mut StatusOptions) -> Vec<String> {
+    match repo.statuses(Some(status_opts)) {
+        Ok(statuses) => statuses
+            .iter()
+            .filter_map(|status| {
+                if status.status() != Status::CURRENT {
+                    let path = match status.path() {
+                        Some(path) => path,
+                        None => "_",
+                    };
+                    Some(format!("  {} {:?}", path, status.status()))
+                } else {
+                    None
+                }
+            })
+            .collect(),
+        Err(e) => {
+            eprintln!(
+                "sync-git: {}: could not check status on repository at {}",
+                e,
+                repo.path().display()
+            );
+            vec![]
+        }
+    }
+}
+
 fn main() -> Result<()> {
     let mut status_opts = StatusOptions::new();
     status_opts.include_ignored(false).include_untracked(true);
@@ -59,30 +86,13 @@ fn main() -> Result<()> {
     }
 
     for repo in repositories.take(&RepositoryState::Clean) {
-        println!("{}", repo.path().display());
+        let statuses = repository_statuses(&repo, &mut status_opts);
 
-        match repo.statuses(Some(&mut status_opts)) {
-            Ok(statuses) => {
-                for status in statuses.iter() {
-                    if status.status() != Status::CURRENT {
-                        println!(
-                            "  {} {:?}",
-                            match status.path() {
-                                Some(path) => path,
-                                None => "_",
-                            },
-                            status.status()
-                        );
-                    }
-                }
-            }
-            Err(e) => {
-                eprintln!(
-                    "sync-git: {}: could not check status on repository at {}",
-                    e,
-                    repo.path().display()
-                );
-            }
+        if !statuses.is_empty() {
+            println!("{}", repo.path().display());
+        }
+        for status in &statuses {
+            println!("{}", status);
         }
     }
     Ok(())
