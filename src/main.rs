@@ -61,9 +61,20 @@ fn main() -> Result<()> {
     for repo in repositories.take(&RepositoryState::Clean) {
         println!("{}", repo.path().display());
 
-        for status in repo.statuses(Some(&mut status_opts))?.iter() {
-            if status.status() != Status::CURRENT {
-                println!("  {} {:?}", status.path().unwrap(), status.status());
+        match repo.statuses(Some(&mut status_opts)) {
+            Ok(statuses) => {
+                for status in statuses.iter() {
+                    if status.status() != Status::CURRENT {
+                        println!("  {} {:?}", status.path().unwrap(), status.status());
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!(
+                    "sync-git: {}: could not check status on repository at {}",
+                    e,
+                    repo.path().display()
+                );
             }
         }
     }
