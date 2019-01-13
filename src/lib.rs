@@ -2,6 +2,9 @@ use failure::Fail;
 use git2::Repository;
 use walkdir::{DirEntry, IntoIter, WalkDir};
 
+mod status_map;
+use crate::status_map::RepositoryStateMap;
+
 #[derive(Debug, Fail)]
 pub enum Error {
     #[fail(display = "walkdir error: {}", _0)]
@@ -77,7 +80,10 @@ impl Iterator for WalkGitRepos<IntoIter> {
 #[cfg(test)]
 mod test {
     use super::*;
+
     use std::{panic, process::Command, sync::Once};
+
+    use git2::RepositoryState;
 
     static START: Once = Once::new();
 
@@ -107,6 +113,13 @@ mod test {
         assert!(result.is_ok())
     }
 
+    fn repository_paths(repositories: &[Repository]) -> Vec<String> {
+        repositories
+            .iter()
+            .map(|r| r.path().to_string_lossy().into())
+            .collect()
+    }
+
     macro_rules! relative_string_vec {
         { $( $val:expr ),* } => { {
             let current_dir = std::env::current_dir().expect("something wrong with current directory");
@@ -117,15 +130,35 @@ mod test {
     #[test]
     fn test_git_repo_iterator() {
         run_test(|| {
-            let dir_names: Result<Vec<String>> = WalkGitRepos::new("test-cases")
-                .map(|r| r.map(|r| r.path().to_string_lossy().into()))
-                .collect();
+            let dir_names: Result<Vec<Repository>> = WalkGitRepos::new("test-cases").collect();
             let dir_names = dir_names.expect("unexpected deceptively named folder in test-cases");
             let expected: Vec<String> = relative_string_vec![
                 "test-cases/mid-state/rebase/.git/",
                 "test-cases/mid-state/rebase-interactive/.git/"
             ];
-            assert_eq!(expected, dir_names);
+            assert_eq!(expected, repository_paths(&dir_names));
+        });
+    }
+
+    #[test]
+    fn test_partition_git_repo() {
+        run_test(|| {
+            let repositories: Result<RepositoryStateMap> =
+                WalkGitRepos::new("test-cases").collect();
+            let repositories =
+                repositories.expect("unexpected deceptively named folder in test-cases");
+
+            let expected = relative_string_vec!["test-cases/mid-state/rebase/.git/"];
+            assert_eq!(
+                expected,
+                repository_paths(&repositories[&RepositoryState::Rebase])
+            );
+
+            let expected = relative_string_vec!["test-cases/mid-state/rebase-interactive/.git/"];
+            assert_eq!(
+                expected,
+                repository_paths(&repositories[&RepositoryState::RebaseInteractive])
+            );
         });
     }
 }
