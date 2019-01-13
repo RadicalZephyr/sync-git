@@ -15,6 +15,24 @@ fn print_errors(repo: Result<Repository>) -> Option<Repository> {
     }
 }
 
+fn display_state(repo: &Repository) -> &'static str {
+    use git2::RepositoryState::*;
+    match repo.state() {
+        Merge => "merge",
+        Revert => "revert",
+        RevertSequence => "revert-sequence",
+        CherryPick => "cherrypick",
+        CherryPickSequence => "cherrypick-sequence",
+        Bisect => "bisect",
+        Rebase => "rebase",
+        RebaseInteractive => "rebase-interactive",
+        RebaseMerge => "rebase-merge",
+        ApplyMailbox => "apply-mailbox",
+        ApplyMailboxOrRebase => "apply-mailbox-or-rebase",
+        _ => unreachable!(),
+    }
+}
+
 fn main() -> Result<()> {
     let mut status_opts = StatusOptions::new();
     status_opts.include_ignored(false).include_untracked(true);
@@ -36,7 +54,7 @@ fn main() -> Result<()> {
         RepositoryState::ApplyMailboxOrRebase,
     ] {
         for repo in &repositories[state] {
-            eprintln!("{} {:?}", repo.path().display(), state);
+            println!("{} {}", repo.path().display(), display_state(&repo));
         }
     }
 
