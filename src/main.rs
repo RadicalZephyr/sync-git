@@ -1,7 +1,7 @@
 use git2::{Repository, Status, StatusOptions};
 use walkdir::WalkDir;
 
-use sync_git::{GitRepos, Result};
+use sync_git::{Result, WalkGitRepos};
 
 fn is_clean(repo: &Repository) -> bool {
     match repo.state() {
@@ -14,8 +14,7 @@ fn main() -> Result<()> {
     let mut status_opts = StatusOptions::new();
     status_opts.include_ignored(false).include_untracked(true);
 
-    let walker = WalkDir::new(".").into_iter();
-    for repo in GitRepos::new(walker)
+    for repo in WalkGitRepos::new(".")
         .filter_map(Result::ok)
         .filter(is_clean)
     {

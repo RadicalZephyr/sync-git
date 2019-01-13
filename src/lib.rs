@@ -1,6 +1,6 @@
 use failure::Fail;
 use git2::Repository;
-use walkdir::{DirEntry, IntoIter};
+use walkdir::{DirEntry, IntoIter, WalkDir};
 
 #[derive(Debug, Fail)]
 pub enum Error {
@@ -33,13 +33,14 @@ fn is_git_dir(entry: &DirEntry) -> bool {
         .unwrap_or(false)
 }
 
-pub struct GitRepos<I> {
+pub struct WalkGitRepos<I> {
     it: I,
 }
 
-impl GitRepos<IntoIter> {
-    pub fn new(it: IntoIter) -> GitRepos<IntoIter> {
-        GitRepos { it }
+impl WalkGitRepos<IntoIter> {
+    pub fn new(root: impl AsRef<str>) -> WalkGitRepos<IntoIter> {
+        let it = WalkDir::new(root.as_ref()).into_iter();
+        WalkGitRepos { it }
     }
 }
 
@@ -55,7 +56,7 @@ macro_rules! itry {
     };
 }
 
-impl Iterator for GitRepos<IntoIter> {
+impl Iterator for WalkGitRepos<IntoIter> {
     type Item = Result<Repository>;
 
     fn next(&mut self) -> Option<Result<Repository>> {
@@ -76,9 +77,55 @@ impl Iterator for GitRepos<IntoIter> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::{panic, process::Command, sync::Once};
+
+    static START: Once = Once::new();
+
+    fn setup() {
+        START.call_once(|| {
+            println!("Setting up test cases");
+            let mut child = Command::new("just")
+                .arg("unpack-test-data")
+                .spawn()
+                .expect("failed to start just");
+            child.wait().expect("failed to wait on just");
+        });
+    }
+
+    fn teardown() {}
+
+    fn run_test<T>(test: T) -> ()
+    where
+        T: FnOnce() -> () + panic::UnwindSafe,
+    {
+        setup();
+
+        let result = panic::catch_unwind(|| test());
+
+        teardown();
+
+        assert!(result.is_ok())
+    }
+
+    macro_rules! relative_string_vec {
+        { $( $val:expr ),* } => { {
+            let current_dir = std::env::current_dir().expect("something wrong with current directory");
+            vec![ $( format!("{}/{}", current_dir.display(), $val) ),* ]}
+        }
+    }
 
     #[test]
-    fn test_thing() {
-        assert_eq!(true, false);
+    fn test_git_repo_iterator() {
+        run_test(|| {
+            let dir_names: Result<Vec<String>> = WalkGitRepos::new("test-cases")
+                .map(|r| r.map(|r| r.path().to_string_lossy().into()))
+                .collect();
+            let dir_names = dir_names.expect("unexpected deceptively named folder in test-cases");
+            let expected: Vec<String> = relative_string_vec![
+                "test-cases/mid-state/rebase/.git/",
+                "test-cases/mid-state/rebase-interactive/.git/"
+            ];
+            assert_eq!(expected, dir_names);
+        });
     }
 }
