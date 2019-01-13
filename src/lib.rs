@@ -134,8 +134,10 @@ mod test {
             let dir_names = dir_names.expect("unexpected deceptively named folder in test-cases");
             let expected: Vec<String> = relative_string_vec![
                 "test-cases/mid-state/rebase/.git/",
+                "test-cases/mid-state/revert-sequence/.git/",
                 "test-cases/mid-state/rebase-interactive/.git/",
-                "test-cases/mid-state/merge/.git/"
+                "test-cases/mid-state/merge/.git/",
+                "test-cases/mid-state/revert/.git/"
             ];
             assert_eq!(expected, repository_paths(&dir_names));
         });
@@ -153,6 +155,18 @@ mod test {
             assert_eq!(
                 expected,
                 repository_paths(&repositories[&RepositoryState::Merge])
+            );
+
+            let expected = relative_string_vec!["test-cases/mid-state/revert/.git/"];
+            assert_eq!(
+                expected,
+                repository_paths(&repositories[&RepositoryState::Revert])
+            );
+
+            let expected = relative_string_vec!["test-cases/mid-state/revert-sequence/.git/"];
+            assert_eq!(
+                expected,
+                repository_paths(&repositories[&RepositoryState::RevertSequence])
             );
 
             let expected = relative_string_vec!["test-cases/mid-state/rebase/.git/"];
