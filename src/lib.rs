@@ -130,16 +130,19 @@ mod test {
     #[test]
     fn test_git_repo_iterator() {
         run_test(|| {
-            let dir_names: Result<Vec<Repository>> = WalkGitRepos::new("test-cases").collect();
-            let dir_names = dir_names.expect("unexpected deceptively named folder in test-cases");
+            let repositories: Result<Vec<Repository>> = WalkGitRepos::new("test-cases").collect();
+            let repositories =
+                repositories.expect("unexpected deceptively named folder in test-cases");
             let expected: Vec<String> = relative_string_vec![
+                "test-cases/mid-state/merge/.git/",
+                "test-cases/mid-state/rebase-interactive/.git/",
                 "test-cases/mid-state/rebase/.git/",
                 "test-cases/mid-state/revert-sequence/.git/",
-                "test-cases/mid-state/rebase-interactive/.git/",
-                "test-cases/mid-state/merge/.git/",
                 "test-cases/mid-state/revert/.git/"
             ];
-            assert_eq!(expected, repository_paths(&dir_names));
+            let mut dir_names = repository_paths(&repositories);
+            dir_names.sort();
+            assert_eq!(expected, dir_names);
         });
     }
 
