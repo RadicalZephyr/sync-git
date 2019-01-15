@@ -8,4 +8,7 @@ matrix:
   allow_failures:
     - rust: nightly
 
+before_install:
+  - cargo install just
+
 cache: cargo
