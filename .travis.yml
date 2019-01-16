@@ -9,6 +9,6 @@ matrix:
     - rust: nightly
 
 before_install:
-  - cargo install just
+  - cargo install just || true
 
 cache: cargo
